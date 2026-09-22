@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuentas Claras - Divisor de Cuentas CLP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                            accent: '#8b5cf6'
+                        },
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            hover: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        .animate-pulse-fast {
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 selection:bg-brand-500 selection:text-slate-950">
+
+    <div id="app" class="max-w-md mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-brand-500/20">
+                    🇨🇱
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight text-white">Cuentas Claras</h1>
+                    <p class="text-xs text-slate-400 font-medium">Divisor de cuentas para bares</p>
+                </div>
+            </div>
+            <button id="btn-reset" title="Nueva Mesa" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium border border-transparent hover:border-slate-700">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                <span>Reset</span>
+            </button>
+        </header>
+
+        <!-- Step 1: Amigos en la mesa -->
+        <section class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-sm font-semibold flex items-center gap-2 text-slate-200">
+                    <i data-lucide="users" class="w-4 h-4 text-brand-400"></i>
+                    Integrantes de la Mesa
+                </label>
+                <span id="friends-count" class="text-xs bg-slate-800 text-slate-300 font-semibold px-2.5 py-0.5 rounded-full border border-slate-700">0 personas</span>
+            </div>
+
+            <form id="form-add-friend" class="flex gap-2 mb-3">
+                <input type="text" id="input-friend-name" placeholder="Ej: Juan, María, Pedro..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all placeholder:text-slate-500" required>
+                <button type="submit" class="bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold px-4 rounded-xl transition-all flex items-center justify-center active:scale-95 shadow-md shadow-brand-500/10">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                </button>
+            </form>
+
+            <div id="friends-list" class="flex flex-wrap gap-2 min-h-[36px] items-center">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Step 2: Carga / Escaneo de Boleta -->
+        <section class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-sm font-semibold flex items-center gap-2 text-slate-200">
+                    <i data-lucide="receipt" class="w-4 h-4 text-brand-400"></i>
+                    Boleta de Consumo
+                </label>
+                <button id="btn-toggle-manual" class="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                    <span>+ Añadir Ítem</span>
+                </button>
+            </div>
+
+            <!-- Area de Escaneo / OCR -->
+            <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-brand-500/50 rounded-xl p-5 text-center transition-all bg-slate-950/50 relative overflow-hidden group cursor-pointer mb-3">
+                <input type="file" id="receipt-file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                <div id="scan-state-default" class="flex flex-col items-center gap-2">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 group-hover:bg-brand-500/10 flex items-center justify-center text-slate-400 group-hover:text-brand-400 transition-all">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-300">Subir foto de la boleta</p>
+                        <p class="text-[10px] text-slate-500">Haz clic o arrastra una imagen aquí</p>
+                    </div>
+                </div>
+
+                <div id="scan-state-loading" class="hidden flex-col items-center gap-2 py-2">
+                    <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-xs font-semibold text-brand-400 animate-pulse">Analizando boleta con IA...</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+                <button id="btn-simulate" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Cargar Boleta Demo</span>
+                </button>
+            </div>
+
+            <!-- Formulario de ítem manual (Oculto por defecto) -->
+            <form id="form-manual-item" class="hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-12 gap-2">
+                <input type="text" id="manual-name" placeholder="Ej: Pisco Sour" class="col-span-6 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 placeholder:text-slate-600" required>
+                <input type="number" id="manual-price" placeholder="Precio ($)" class="col-span-4 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 placeholder:text-slate-600" required min="0" step="100">
+                <button type="submit" class="col-span-2 bg-brand-500 text-slate-950 font-bold rounded-xl flex items-center justify-center hover:bg-brand-400 transition-colors">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </section>
+
+        <!-- Step 3: Lista de Ítems para Asignar -->
+        <section class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-sm font-semibold flex items-center gap-2 text-slate-200">
+                    <i data-lucide="shopping-bag" class="w-4 h-4 text-brand-400"></i>
+                    Detalle de Ítems
+                </label>
+                <span id="items-status" class="text-xs text-amber-400 font-medium">0 ítems sin asignar</span>
+            </div>
+
+            <div id="items-list" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
+                <!-- Se llena dinámicamente -->
+                <div id="empty-items-state" class="text-center py-8 text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    <i data-lucide="receipt" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
+                    <p class="text-xs">Aún no hay ítems en la cuenta.</p>
+                    <p class="text-[10px] text-slate-600">Escanea una boleta o carga la demo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Propina y Opciones -->
+        <section class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="heart-handshake" class="w-4 h-4 text-brand-400"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-slate-200">Propina Sugerida (10%)</p>
+                        <p class="text-[10px] text-slate-400">Añadir voluntario para garzón</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-tip" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                </label>
+            </div>
+        </section>
+
+        <!-- Step 5: Resumen Final y Cobro -->
+        <section class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <label class="text-sm font-semibold flex items-center gap-2 text-slate-200">
+                    <i data-lucide="calculator" class="w-4 h-4 text-brand-400"></i>
+                    Resumen Final
+                </label>
+                <div class="text-right">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total Mesa</p>
+                    <p id="total-table-amount" class="text-lg font-extrabold text-brand-400">$0 CLP</p>
+                </div>
+            </div>
+
+            <!-- Desglose por Persona -->
+            <div id="breakdown-list" class="space-y-3 mb-4">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
+            <!-- Configuración Datos de Transferencia -->
+            <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <i data-lucide="credit-card" class="w-3.5 h-3.5 text-slate-400"></i>
+                        Datos para Transferir (Opcional)
+                    </span>
+                    <button id="btn-toggle-bank" class="text-[11px] text-brand-400 hover:underline">Editar</button>
+                </div>
+                <div id="bank-info-display" class="text-[11px] text-slate-400 space-y-0.5">
+                    <p id="bank-display-text" class="italic text-slate-500">Sin datos configurados (clic en editar)</p>
+                </div>
+                <div id="bank-info-form" class="hidden space-y-2 mt-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="bank-name" placeholder="Banco / Institución (ej: Banco Estado)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+                    <input type="text" id="bank-rut" placeholder="RUT (ej: 12.345.678-9)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+                    <input type="text" id="bank-account" placeholder="N° Cuenta / Tipo" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+                    <button id="btn-save-bank" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 rounded-lg font-medium transition-colors">Guardar Datos</button>
+                </div>
+            </div>
+
+            <!-- Botón Copiar para WhatsApp -->
+            <button id="btn-copy-whatsapp" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-95">
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                <span>Copiar Resumen para WhatsApp</span>
+            </button>
+        </section>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 z-50">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-400"></i>
+        <span id="toast-message">Mensaje copiado</span>
+    </div>
+
+    <script>
+        // Formateador de moneda en CLP
+        const formatCLP = (amount) => {
+            return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            }).format(amount).replace('CLP', '').trim() + ' CLP';
+        };
+
+        // Estado Global de la App
+        let state = {
+            friends: [],
+            items: [],
+            includeTip: true,
+            bankDetails: {
+                bank: '',
+                rut: '',
+                account: ''
+            }
+        };
+
+        // Inicializar iconos de Lucide
+        function initIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        // Cargar estado guardado en LocalStorage
+        function loadState() {
+            const saved = localStorage.getItem('cuentas_claras_state');
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Error al cargar datos guardados:', e);
+                }
+            }
+            // Si está vacío, cargar por defecto a un grupo típico
+            if (state.friends.length === 0) {
+                state.friends = ['Yo', 'Juan', 'María'];
+            }
+        }
+
+        // Guardar estado en LocalStorage
+        function saveState() {
+            localStorage.setItem('cuentas_claras_state', JSON.stringify(state));
+            render();
+        }
+
+        // Renderizado Completo de la UI
+        function render() {
+            renderFriends();
+            renderItems();
+            renderBreakdown();
+            renderBankInfo();
+            document.getElementById('toggle-tip').checked = state.includeTip;
+            initIcons();
+        }
+
+        // Renderizar lista de amigos
+        function renderFriends() {
+            const container = document.getElementById('friends-list');
+            const countLabel = document.getElementById('friends-count');
+            container.innerHTML = '';
+            
+            countLabel.textContent = `${state.friends.length} persona${state.friends.length !== 1 ? 's' : ''}`;
+
+            if (state.friends.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-500 italic">Agrega personas para empezar</span>`;
+                return;
+            }
+
+            state.friends.forEach((friend, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 transition-colors group';
+                chip.innerHTML = `
+                    <span>${friend}</span>
+                    <button type="button" onclick="removeFriend(${index})" class="text-slate-400 group-hover:text-rose-400 transition-colors ml-0.5">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                `;
+                container.appendChild(chip);
+            });
+        }
+
+        function addFriend(name) {
+            const trimmed = name.trim();
+            if (trimmed && !state.friends.includes(trimmed)) {
+                state.friends.push(trimmed);
+                saveState();
+            }
+        }
+
+        function removeFriend(index) {
+            const friendName = state.friends[index];
+            state.friends.splice(index, 1);
+            
+            // Remover a esta persona de los ítems asignados
+            state.items.forEach(item => {
+                item.assignedTo = item.assignedTo.filter(name => name !== friendName);
+            });
+
+            saveState();
+        }
+
+        // Renderizar ítems y selectores de personas
+        function renderItems() {
+            const container = document.getElementById('items-list');
+            const statusLabel = document.getElementById('items-status');
+            container.innerHTML = '';
+
+            if (state.items.length === 0) {
+                container.innerHTML = `
+                    <div id="empty-items-state" class="text-center py-8 text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                        <i data-lucide="receipt" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
+                        <p class="text-xs">Aún no hay ítems en la cuenta.</p>
+                        <p class="text-[10px] text-slate-600">Escanea una boleta o usa la demo.</p>
+                    </div>
+                `;
+                statusLabel.textContent = '0 ítems';
+                return;
+            }
+
+            let unassignedCount = 0;
+
+            state.items.forEach((item, itemIndex) => {
+                if (item.assignedTo.length === 0) unassignedCount++;
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border transition-all ${
+                    item.assignedTo.length === 0 
+                    ? 'bg-amber-950/20 border-amber-500/30' 
+                    : 'bg-slate-950/60 border-slate-800'
+                }`;
+
+                // Generar los botones de selección rápida de personas
+                let friendsButtonsHtml = '';
+                if (state.friends.length > 0) {
+                    friendsButtonsHtml = `
+                        <div class="flex flex-wrap gap-1 mt-2.5 pt-2 border-t border-slate-800/80">
+                            <button onclick="toggleSelectAll(${itemIndex})" class="text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                                item.assignedTo.length === state.friends.length 
+                                ? 'bg-brand-500 text-slate-950 border-brand-500' 
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                            }">
+                                Todos
+                            </button>
+                            ${state.friends.map(friend => {
+                                const isSelected = item.assignedTo.includes(friend);
+                                return `
+                                    <button onclick="toggleAssignItem(${itemIndex}, '${friend}')" class="text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
+                                        isSelected 
+                                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                                    }">
+                                        ${friend}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    friendsButtonsHtml = `<p class="text-[10px] text-rose-400 mt-2">Agrega integrantes primero</p>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-xs text-slate-200">${item.name}</span>
+                                ${item.quantity && item.quantity > 1 ? `<span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-mono">${item.quantity}x</span>` : ''}
+                            </div>
+                            <p class="text-xs font-semibold text-brand-400 mt-0.5">${formatCLP(item.price)}</p>
+                        </div>
+                        <button onclick="removeItem(${itemIndex})" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    ${friendsButtonsHtml}
+                `;
+
+                container.appendChild(card);
+            });
+
+            statusLabel.textContent = unassignedCount > 0 
+                ? `${unassignedCount} sin asignar` 
+                : '¡Todo asignado!';
+            statusLabel.className = unassignedCount > 0 
+                ? 'text-xs text-amber-400 font-medium' 
+                : 'text-xs text-brand-400 font-medium';
+        }
+
+        function toggleAssignItem(itemIndex, friendName) {
+            const item = state.items[itemIndex];
+            const exists = item.assignedTo.includes(friendName);
+            
+            if (exists) {
+                item.assignedTo = item.assignedTo.filter(name => name !== friendName);
+            } else {
+                item.assignedTo.push(friendName);
+            }
+            saveState();
+        }
+
+        function toggleSelectAll(itemIndex) {
+            const item = state.items[itemIndex];
+            if (item.assignedTo.length === state.friends.length) {
+                item.assignedTo = [];
+            } else {
+                item.assignedTo = [...state.friends];
+            }
+            saveState();
+        }
+
+        function removeItem(index) {
+            state.items.splice(index, 1);
+            saveState();
+        }
+
+        function addManualItem(name, price) {
+            state.items.push({
+                name,
+                price: parseFloat(price),
+                quantity: 1,
+                assignedTo: []
+            });
+            saveState();
+        }
+
+        // Calcular Totales por Amigo
+        function calculateBreakdown() {
+            const breakdown = {};
+            state.friends.forEach(f => {
+                breakdown[f] = {
+                    subtotal: 0,
+                    tip: 0,
+                    total: 0,
+                    items: []
+                };
+            });
+
+            let tableSubtotal = 0;
+
+            state.items.forEach(item => {
+                tableSubtotal += item.price;
+                if (item.assignedTo.length > 0) {
+                    const splitPrice = item.price / item.assignedTo.length;
+                    item.assignedTo.forEach(friend => {
+                        if (breakdown[friend]) {
+                            breakdown[friend].subtotal += splitPrice;
+                            breakdown[friend].items.push({
+                                name: item.name,
+                                price: splitPrice,
+                                shared: item.assignedTo.length > 1
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Aplicar Propina
+            const tipMultiplier = state.includeTip ? 0.10 : 0;
+            let tableTotal = 0;
+
+            Object.keys(breakdown).forEach(friend => {
+                const userSub = breakdown[friend].subtotal;
+                const userTip = userSub * tipMultiplier;
+                breakdown[friend].tip = userTip;
+                breakdown[friend].total = userSub + userTip;
+                tableTotal += breakdown[friend].total;
+            });
+
+            return { breakdown, tableSubtotal, tableTotal };
+        }
+
+        // Renderizar Resumen Final
+        function renderBreakdown() {
+            const container = document.getElementById('breakdown-list');
+            const totalTableEl = document.getElementById('total-table-amount');
+            container.innerHTML = '';
+
+            const { breakdown, tableTotal } = calculateBreakdown();
+            totalTableEl.textContent = formatCLP(tableTotal);
+
+            if (state.friends.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">No hay personas en la mesa.</p>`;
+                return;
+            }
+
+            state.friends.forEach(friend => {
+                const data = breakdown[friend];
+                const card = document.createElement('div');
+                card.className = 'bg-slate-950/80 border border-slate-800 rounded-xl p-3';
+
+                const itemsSummary = data.items.map(i => `${i.name}${i.shared ? ' (compartido)' : ''}`).join(', ') || 'Sin consumos asignados';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-bold text-sm text-slate-100">${friend}</span>
+                        <span class="font-extrabold text-sm text-brand-400">${formatCLP(data.total)}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                        <span class="truncate max-w-[200px]" title="${itemsSummary}">${itemsSummary}</span>
+                        ${state.includeTip ? `<span class="text-[10px] text-slate-500">(inc. 10% propina)</span>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderBankInfo() {
+            const display = document.getElementById('bank-display-text');
+            const b = state.bankDetails;
+            if (b.bank || b.rut || b.account) {
+                display.innerHTML = `
+                    <span class="text-slate-200 font-medium">${b.bank || 'Banco'}</span> | 
+                    <span>RUT: ${b.rut || '-'}</span> | 
+                    <span>N°: ${b.account || '-'}</span>
+                `;
+                display.classList.remove('italic', 'text-slate-500');
+            } else {
+                display.textContent = 'Sin datos configurados (clic en editar)';
+                display.classList.add('italic', 'text-slate-500');
+            }
+        }
+
+        function generateWhatsAppMessage() {
+            const { breakdown, tableTotal } = calculateBreakdown();
+            let msg = `🍻 *CUENTAS CLARAS - RESUMEN MESA* 🍻\n\n`;
+
+            state.friends.forEach(friend => {
+                const data = breakdown[friend];
+                msg += `👉 *${friend}*: ${formatCLP(data.total)}\n`;
+            });
+
+            msg += `\n💰 *Total Mesa*: ${formatCLP(tableTotal)}\n`;
+
+            const b = state.bankDetails;
+            if (b.bank || b.rut || b.account) {
+                msg += `\n💳 *Datos para transferir:*\n`;
+                if (b.bank) msg += `- Banco: ${b.bank}\n`;
+                if (b.rut) msg += `- RUT: ${b.rut}\n`;
+                if (b.account) msg += `- Cuenta: ${b.account}\n`;
+            }
+
+            msg += `\n_Generado con Cuentas Claras_ 🇨🇱`;
+            return msg;
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('¡Resumen copiado para WhatsApp!');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            msgEl.textContent = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // Cargar Datos Demo (Simulación)
+        function loadDemoReceipt() {
+            state.items = [
+                { name: 'Cerveza Austral Kross', price: 9000, quantity: 2, assignedTo: [] },
+                { name: 'Chorrillana Tradicional', price: 15500, quantity: 1, assignedTo: [] },
+                { name: 'Pisco Sour Catedral', price: 4500, quantity: 1, assignedTo: [] },
+                { name: 'Papas Fritas XL', price: 6000, quantity: 1, assignedTo: [] }
+            ];
+            saveState();
+            showToast('Boleta demo cargada con éxito');
+        }
+
+        // Escaneo Real con Gemini API (Vision)
+        async function analyzeReceiptImage(file) {
+            const loadingState = document.getElementById('scan-state-loading');
+            const defaultState = document.getElementById('scan-state-default');
+
+            defaultState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            loadingState.classList.add('flex');
+
+            try {
+                // Convertir archivo a base64
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    const base64Data = reader.result.split(',')[1];
+                    
+                    const prompt = "Analiza esta foto de boleta o recibo de bar/restaurante chileno. Extrae los ítems o consumos con sus nombres, precios individuales y cantidades. Retorna ÚNICAMENTE un objeto JSON en formato array con las propiedades: 'name' (string), 'price' (monto numérico entero en pesos chilenos sin puntos), y 'quantity' (número entero). Ejemplo: [{\"name\": \"Cerveza\", \"price\": 4500, \"quantity\": 1}]. No agregues explicaciones ni sintaxis markdown adicional.";
+
+                    const apiKey = ""; // Canvas runtime inserta la clave
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+
+                    const payload = {
+                        contents: [
+                            {
+                                role: "user",
+                                parts: [
+                                    { text: prompt },
+                                    {
+                                        inlineData: {
+                                            mimeType: file.type || "image/jpeg",
+                                            data: base64Data
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (responseText) {
+                        // Limpiar formato markdown JSON si existe
+                        const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const parsedItems = JSON.parse(jsonString);
+
+                        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+                            state.items = parsedItems.map(item => ({
+                                name: item.name || 'Consumo',
+                                price: parseInt(item.price) || 0,
+                                quantity: parseInt(item.quantity) || 1,
+                                assignedTo: []
+                            }));
+                            saveState();
+                            showToast('¡Boleta escaneada con éxito!');
+                        } else {
+                            throw new Error('Formato no reconocido');
+                        }
+                    } else {
+                        throw new Error('Sin respuesta del modelo');
+                    }
+
+                    loadingState.classList.add('hidden');
+                    loadingState.classList.remove('flex');
+                    defaultState.classList.remove('hidden');
+                };
+            } catch (err) {
+                console.error("Error al analizar la boleta:", err);
+                showToast('No se pudo leer la foto. Cargando demo...');
+                loadDemoReceipt();
+                loadingState.classList.add('hidden');
+                loadingState.classList.remove('flex');
+                defaultState.classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            render();
+
+            // Formulario agregar integrante
+            document.getElementById('form-add-friend').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('input-friend-name');
+                addFriend(input.value);
+                input.value = '';
+            });
+
+            // Toggle formulario manual de ítem
+            document.getElementById('btn-toggle-manual').addEventListener('click', () => {
+                const form = document.getElementById('form-manual-item');
+                form.classList.toggle('hidden');
+            });
+
+            // Agregar ítem manual
+            document.getElementById('form-manual-item').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const nameInput = document.getElementById('manual-name');
+                const priceInput = document.getElementById('manual-price');
+                addManualItem(nameInput.value, priceInput.value);
+                nameInput.value = '';
+                priceInput.value = '';
+                document.getElementById('form-manual-item').classList.add('hidden');
+            });
+
+            // Toggle Propina
+            document.getElementById('toggle-tip').addEventListener('change', (e) => {
+                state.includeTip = e.target.checked;
+                saveState();
+            });
+
+            // Botón Demo
+            document.getElementById('btn-simulate').addEventListener('click', loadDemoReceipt);
+
+            // Subir Archivo de Boleta
+            document.getElementById('receipt-file').addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    analyzeReceiptImage(e.target.files[0]);
+                }
+            });
+
+            // WhatsApp Share
+            document.getElementById('btn-copy-whatsapp').addEventListener('click', () => {
+                const text = generateWhatsAppMessage();
+                copyToClipboard(text);
+            });
+
+            // Reset App
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                if (confirm('¿Deseas reiniciar la mesa actual?')) {
+                    state.friends = ['Yo', 'Juan', 'María'];
+                    state.items = [];
+                    saveState();
+                    showToast('Mesa reiniciada');
+                }
+            });
+
+            // Toggle Datos Banco
+            document.getElementById('btn-toggle-bank').addEventListener('click', () => {
+                const form = document.getElementById('bank-info-form');
